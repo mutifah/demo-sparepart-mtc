@@ -11,8 +11,8 @@ export type PriorityLevel = 1 | 2 | 3;
 
 export interface ScoringWeights {
   ved: number; // Default 50
-  leadTime: number; // Default 30
-  stock: number; // Default 20
+  leadTime: number; // Default 25
+  stock: number; // Default 25
 }
 
 export interface SheetRowRefs {

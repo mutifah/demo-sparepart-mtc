@@ -53,7 +53,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   Skor Otomatis
                 </h2>
                 <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-                  Hitung VED, Lead Time, dan Sisa Stok sesuai bobot 50/30/20.
+                  Hitung VED, Lead Time, dan Sisa Stok sesuai bobot 50/25/25.
                 </p>
               </div>
             </div>

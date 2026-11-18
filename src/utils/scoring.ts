@@ -10,8 +10,8 @@ import {
 
 export const DEFAULT_WEIGHTS: ScoringWeights = {
   ved: 50,
-  leadTime: 30,
-  stock: 20,
+  leadTime: 25,
+  stock: 25,
 };
 
 export const VED_OPTIONS: Array<{

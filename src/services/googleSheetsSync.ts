@@ -1153,7 +1153,7 @@ function buildGuideRows(): (string | number)[][] {
     [''],
     ['SKEMA SKOR'],
     ['Parameter VED', 'Vital = 15 | Essential = 10 | Desirable = 5'],
-    ['Bobot Default', 'VED = 50% | Lead Time = 30% | Sisa Stok = 20% → Total Skor Maks = 15.0'],
+    ['Bobot Default', 'VED = 50% | Lead Time = 25% | Sisa Stok = 25% → Total Skor Maks = 15.0'],
     ['Skor Stok', 'Stok < Min → 15 | Min ≤ Stok < 2×Min → 10 | Stok ≥ 2×Min → 5'],
     ['Skor Lead Time', 'Impor/Indent >1 bln → 15 | Distributor 1–4 mgg → 10 | Lokal <1 mgg → 5'],
     [''],

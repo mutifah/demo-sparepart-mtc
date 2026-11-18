@@ -318,7 +318,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                 Bobot Penilaian Aktif
               </h2>
               <p className="text-xs text-slate-600">
-                Standar: 50% VED · 30% Lead Time · 20% Stok
+                Standar: 50% VED · 25% Lead Time · 25% Stok
               </p>
             </div>
             <button
@@ -418,7 +418,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                   onClick={() => setDraftWeights({ ...DEFAULT_WEIGHTS })}
                   className="min-h-[40px] px-3 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50"
                 >
-                  Reset (50/30/20)
+                  Reset (50/25/25)
                 </button>
                 <button
                   type="button"
