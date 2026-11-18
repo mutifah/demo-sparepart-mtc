@@ -1,0 +1,25 @@
+PANDUAN PENGGUNAAN – SISTEM SKORING PRIORITAS SPAREPART,
+Mengacu pada prinsip Criticality Assessment – ISO 55001 Asset Management,
+,
+ALUR KERJA,
+Step 1,"Sheet [1_ASSET_VED] → Klasifikasi semua equipment per lokasi (Intake / WTP) ke dalam kategori V / E / D, lalu daftarkan spare part tiap equipment"
+Step 2,Sheet [2_LEAD_TIME] → Isi estimasi lead time pengadaan untuk tiap spare part (Lokal / Distributor / Impor)
+Step 3,Sheet [3_SISA_STOK] → Update sisa stok aktual tiap akhir tahun. Sheet ini yang DINAMIS – diperbarui setiap siklus perencanaan
+Step 4,Sheet [4_SKORING] → Hasil kompilasi otomatis. Skor dihitung dari VED + Lead Time + Sisa Stok dengan bobot masing-masing
+,
+SKEMA SKOR,
+Parameter,Vital = 15 | Essential = 10 | Desirable = 5
+Bobot Default,VED = 50% | Lead Time = 30% | Sisa Stok = 20% → Total Skor Maks = 15.0
+Skor Stok,Stok < Min → 15 | Min ≤ Stok < 2×Min → 10 | Stok ≥ 2×Min → 5
+Skor Lead Time,Impor/Indent >1 bln → 15 | Distributor 1–4 mgg → 10 | Lokal <1 mgg → 5
+,
+KATEGORI PRIORITAS,
+🔴 Prioritas 1,"Skor 11.0 – 15.0 → Order segera, masuk anggaran Q1 tahun berikutnya"
+🟡 Prioritas 2,"Skor 7.5 – 10.9 → Masuk anggaran tahun berjalan, monitor ketat"
+🟢 Prioritas 3,"Skor 5.0 – 7.4 → Stok aman, order saat mendekati min"
+,
+CATATAN PENTING,
+VED Equipment,Tentukan dulu kritikalitas equipment → gunakan sebagai acuan VED spare part-nya
+VED Part,Equipment V = part bisa V/E/D | Equipment E = part maks E | Equipment D = part semua D
+Yang Statis,VED Part & Lead Time → hanya berubah jika ada perubahan equipment atau supplier
+Yang Dinamis,Sisa Stok → diupdate setiap akhir tahun sebelum perencanaan pengadaan
