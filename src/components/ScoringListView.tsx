@@ -197,6 +197,10 @@ export const ScoringListView: React.FC<ScoringListViewProps> = ({
                     <span className="truncate max-w-[180px]">
                       {item.namaEquipment || 'Equipment umum'}
                     </span>
+                    <span aria-hidden="true">·</span>
+                    <span className="font-medium text-slate-700">
+                      Eq: {item.vedEquipment}
+                    </span>
                     {item.lokasiUnit && (
                       <>
                         <span aria-hidden="true">·</span>
@@ -209,10 +213,10 @@ export const ScoringListView: React.FC<ScoringListViewProps> = ({
                   <div className="mt-3 grid grid-cols-3 gap-1.5 bg-slate-50 rounded-xl py-2 px-2.5 text-center border border-slate-100">
                     <div>
                       <div className="text-[11px] font-medium text-slate-500">
-                        VED
+                        VED Part
                       </div>
                       <div className="mt-0.5 text-xs font-bold text-slate-900 tabular-nums">
-                        {item.ved} ({item.skorVed})
+                        {item.vedPart} ({item.skorVedPart})
                       </div>
                     </div>
                     <div>

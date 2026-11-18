@@ -86,6 +86,18 @@ export function parseVedCode(value: unknown, fallback: VedCode = 'E'): VedCode {
   return fallback;
 }
 
+/**
+ * Equipment V = part bisa V/E/D | Equipment E = part maks E | Equipment D = part semua D
+ */
+export function clampPartVed(partVed: VedCode, equipmentVed: VedCode): VedCode {
+  const eqScore = vedToScore(equipmentVed);
+  const partScore = vedToScore(partVed);
+  if (partScore > eqScore) {
+    return equipmentVed;
+  }
+  return partVed;
+}
+
 export function parseLeadTimeCategory(value: unknown): LeadTimeCategory {
   const s = String(value ?? '').trim().toLowerCase();
   if (
@@ -141,11 +153,9 @@ export function defaultEstimasiForLeadTime(category: LeadTimeCategory): string {
 }
 
 /**
- * Exact rule from user's spreadsheet (Skoring_Prioritas_Sparepart_WTP):
  * Stok < Min -> 15 (KURANG)
  * Min <= Stok < 2 * Min -> 10 (MENIPIS)
  * Stok >= 2 * Min -> 5 (AMAN)
- * (Edge case: if Min === 0 and Max > 0 and Stok === 0 -> 15 KURANG)
  */
 export function computeStockStatusAndScore(
   minStok: number,
@@ -165,11 +175,6 @@ export function computeStockStatusAndScore(
   return { status: 'AMAN', score: 5 };
 }
 
-/**
- * Prioritas 1: Skor 11.0 - 15.0
- * Prioritas 2: Skor 7.5 - 10.9
- * Prioritas 3: Skor 5.0 - 7.4
- */
 export function computePriority(totalSkor: number): PriorityLevel {
   if (totalSkor >= 11.0) return 1;
   if (totalSkor >= 7.5) return 2;
@@ -190,7 +195,9 @@ export function computeSparepart(
   item: SparepartItem,
   weights: ScoringWeights = DEFAULT_WEIGHTS
 ): ComputedSparepart {
-  const skorVed = vedToScore(item.ved);
+  const effectiveVedPart = clampPartVed(item.vedPart, item.vedEquipment);
+  const skorVedEquipment = vedToScore(item.vedEquipment);
+  const skorVedPart = vedToScore(effectiveVedPart);
   const skorLeadTime = leadTimeToScore(item.leadTimeCategory);
   const { status: statusStok, score: skorSisaStok } = computeStockStatusAndScore(
     item.minStok,
@@ -202,7 +209,7 @@ export function computeSparepart(
   const wLt = weights.leadTime / 100;
   const wStok = weights.stock / 100;
 
-  const vedBobot = round2(skorVed * wVed);
+  const vedBobot = round2(skorVedPart * wVed);
   const ltBobot = round2(skorLeadTime * wLt);
   const stokBobot = round2(skorSisaStok * wStok);
   const totalSkor = round2(vedBobot + ltBobot + stokBobot);
@@ -210,7 +217,9 @@ export function computeSparepart(
 
   return {
     ...item,
-    skorVed,
+    vedPart: effectiveVedPart,
+    skorVedEquipment,
+    skorVedPart,
     skorLeadTime,
     statusStok,
     skorSisaStok,
@@ -238,10 +247,6 @@ export function generateItemId(): string {
   return `sp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-/**
- * Starter dataset aligned with user's WTP spreadsheet structure.
- * Used only when creating a brand-new template spreadsheet in Google Drive.
- */
 export const PPT_STARTER_ITEMS: SparepartItem[] = [
   {
     id: 'sp_1',
@@ -251,7 +256,8 @@ export const PPT_STARTER_ITEMS: SparepartItem[] = [
     lokasiUnit: 'WTP',
     subLokasi: 'Ruang Panel PLC',
     namaEquipment: 'Panel Kontrol Utama PLC S7-1500',
-    ved: 'V',
+    vedEquipment: 'V',
+    vedPart: 'V',
     leadTimeCategory: 'Impor/Indent >1 bln',
     estimasiWaktu: '3-6 bulan',
     satuan: 'pcs',
@@ -267,7 +273,8 @@ export const PPT_STARTER_ITEMS: SparepartItem[] = [
     lokasiUnit: 'WTP',
     subLokasi: 'Ruang Panel PLC',
     namaEquipment: 'Panel Kontrol Utama PLC S7-1500',
-    ved: 'V',
+    vedEquipment: 'V',
+    vedPart: 'V',
     leadTimeCategory: 'Impor/Indent >1 bln',
     estimasiWaktu: '3-6 bulan',
     satuan: 'pcs',
@@ -283,7 +290,8 @@ export const PPT_STARTER_ITEMS: SparepartItem[] = [
     lokasiUnit: 'WTP',
     subLokasi: 'Menara Telemetri',
     namaEquipment: 'Sistem Telemetri SCADA',
-    ved: 'V',
+    vedEquipment: 'V',
+    vedPart: 'V',
     leadTimeCategory: 'Distributor 1-4 mgg',
     estimasiWaktu: '1-4 minggu',
     satuan: 'pcs',
@@ -299,7 +307,8 @@ export const PPT_STARTER_ITEMS: SparepartItem[] = [
     lokasiUnit: 'WTP',
     subLokasi: 'Bak Koagulasi',
     namaEquipment: 'Butterfly Valve DN-400',
-    ved: 'E',
+    vedEquipment: 'E',
+    vedPart: 'E',
     leadTimeCategory: 'Impor/Indent >1 bln',
     estimasiWaktu: '3-6 bulan',
     satuan: 'pcs',
@@ -315,7 +324,8 @@ export const PPT_STARTER_ITEMS: SparepartItem[] = [
     lokasiUnit: 'Intake',
     subLokasi: 'Sumur Pompa 1-6',
     namaEquipment: 'Pompa Submersible Xylem 1 - 6',
-    ved: 'E',
+    vedEquipment: 'E',
+    vedPart: 'E',
     leadTimeCategory: 'Distributor 1-4 mgg',
     estimasiWaktu: '1-4 minggu',
     satuan: 'set',
@@ -331,7 +341,8 @@ export const PPT_STARTER_ITEMS: SparepartItem[] = [
     lokasiUnit: 'Intake',
     subLokasi: 'Sumur Pompa 1-6',
     namaEquipment: 'Pompa Submersible Xylem 1 - 6',
-    ved: 'E',
+    vedEquipment: 'E',
+    vedPart: 'E',
     leadTimeCategory: 'Lokal <1 mgg',
     estimasiWaktu: '<1 minggu',
     satuan: 'pcs',
@@ -347,7 +358,8 @@ export const PPT_STARTER_ITEMS: SparepartItem[] = [
     lokasiUnit: 'WTP',
     subLokasi: 'Jaringan Dosing',
     namaEquipment: 'Instalasi Pipa Dosing Kimia',
-    ved: 'D',
+    vedEquipment: 'D',
+    vedPart: 'D',
     leadTimeCategory: 'Distributor 1-4 mgg',
     estimasiWaktu: '1-4 minggu',
     satuan: 'pcs',
@@ -363,7 +375,8 @@ export const PPT_STARTER_ITEMS: SparepartItem[] = [
     lokasiUnit: 'Intake',
     subLokasi: 'Sumur Pompa 1-6',
     namaEquipment: 'Pompa Submersible Xylem 1 - 6',
-    ved: 'D',
+    vedEquipment: 'E',
+    vedPart: 'D',
     leadTimeCategory: 'Lokal <1 mgg',
     estimasiWaktu: '<1 minggu',
     satuan: 'pcs',

@@ -30,7 +30,8 @@ export interface SparepartItem {
   lokasiUnit: string;
   subLokasi: string;
   namaEquipment: string;
-  ved: VedCode; // Single VED parameter
+  vedEquipment: VedCode;
+  vedPart: VedCode;
   leadTimeCategory: LeadTimeCategory;
   estimasiWaktu: string;
   satuan: string;
@@ -41,7 +42,8 @@ export interface SparepartItem {
 }
 
 export interface ComputedSparepart extends SparepartItem {
-  skorVed: number;
+  skorVedEquipment: number;
+  skorVedPart: number;
   skorLeadTime: number;
   statusStok: StockStatus;
   skorSisaStok: number;

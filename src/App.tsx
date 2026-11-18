@@ -393,7 +393,7 @@ export default function App() {
       description: `Perubahan untuk "${item.namaPart}" akan ditulis ke file Google Sheets "${activeSheet.title}".`,
       details: [
         'Tab diperbarui: 1_ASSET_VED, 2_LEAD_TIME, 3_SISA_STOK, dan 4_SKORING (rumus sheet tetap terjaga)',
-        `No. Rak: ${item.noRak} · VED: ${item.ved} · Sisa Stok: ${item.sisaStokAktual} ${item.satuan}`,
+        `No. Rak: ${item.noRak} · VED Eq: ${item.vedEquipment} · VED Part: ${item.vedPart} · Sisa Stok: ${item.sisaStokAktual} ${item.satuan}`,
       ],
       confirmLabel: 'Ya, Simpan Sekarang',
       variant: 'primary',

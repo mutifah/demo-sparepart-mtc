@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Minus, Plus, Save, Trash2, X } from 'lucide-react';
+import { Lock, Minus, Plus, Save, Trash2, X } from 'lucide-react';
 import {
   LeadTimeCategory,
   ScoringWeights,
@@ -7,12 +7,14 @@ import {
   VedCode,
 } from '../types/sparepart';
 import {
+  clampPartVed,
   computeSparepart,
   defaultEstimasiForLeadTime,
   formatScoreId,
   generateItemId,
   LEAD_TIME_OPTIONS,
   VED_OPTIONS,
+  vedToScore,
 } from '../utils/scoring';
 
 interface SparepartEditorModalProps {
@@ -32,7 +34,8 @@ const createEmptyItem = (): SparepartItem => ({
   lokasiUnit: 'WTP',
   subLokasi: '',
   namaEquipment: '',
-  ved: 'E',
+  vedEquipment: 'E',
+  vedPart: 'E',
   leadTimeCategory: 'Distributor 1-4 mgg',
   estimasiWaktu: '1-4 minggu',
   satuan: 'pcs',
@@ -261,25 +264,32 @@ export const SparepartEditorModal: React.FC<SparepartEditorModalProps> = ({
             </div>
           </section>
 
-          {/* 2. Single VED Parameter */}
+          {/* 2. VED Equipment (Mesin Induk) */}
           <section className="pt-4 border-t border-slate-100 space-y-2.5">
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                2. Parameter VED · Kekritisan ({weights.ved}%)
+                2. VED Equipment · Kekritisan Mesin Induk
               </h3>
               <p className="text-xs text-slate-600">
-                Pilih satu tingkat kekritisan sparepart terhadap produksi
+                Tingkat kekritisan mesin induk. Skor VED Part tidak dapat melebihi VED Equipment.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {VED_OPTIONS.map((opt) => {
-                const selected = form.ved === opt.code;
+                const selected = form.vedEquipment === opt.code;
                 return (
                   <button
                     key={opt.code}
                     type="button"
                     onClick={() =>
-                      setForm((p) => ({ ...p, ved: opt.code as VedCode }))
+                      setForm((p) => {
+                        const nextEq = opt.code as VedCode;
+                        return {
+                          ...p,
+                          vedEquipment: nextEq,
+                          vedPart: clampPartVed(p.vedPart, nextEq),
+                        };
+                      })
                     }
                     className={`p-3 rounded-xl border text-left transition-all ${
                       selected
@@ -304,11 +314,68 @@ export const SparepartEditorModal: React.FC<SparepartEditorModalProps> = ({
             </div>
           </section>
 
-          {/* 3. Lead Time */}
+          {/* 3. VED Sparepart */}
           <section className="pt-4 border-t border-slate-100 space-y-2.5">
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                3. Lead Time · Lama Pengadaan ({weights.leadTime}%)
+                3. VED Sparepart · Kekritisan Part ({weights.ved}%)
+              </h3>
+              <p className="text-xs text-slate-600">
+                Pilih kekritisan sparepart (maksimal setara VED Equipment:{' '}
+                <strong className="text-slate-900">{form.vedEquipment}</strong>)
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {VED_OPTIONS.map((opt) => {
+                const selected = form.vedPart === opt.code;
+                const isLocked = opt.score > vedToScore(form.vedEquipment);
+                return (
+                  <button
+                    key={opt.code}
+                    type="button"
+                    disabled={isLocked}
+                    onClick={() =>
+                      setForm((p) => ({
+                        ...p,
+                        vedPart: clampPartVed(opt.code as VedCode, p.vedEquipment),
+                      }))
+                    }
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      isLocked
+                        ? 'border-slate-200 bg-slate-100/80 opacity-60 cursor-not-allowed'
+                        : selected
+                          ? 'border-blue-800 bg-blue-50 ring-2 ring-blue-700'
+                          : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold text-slate-900">
+                        {opt.label}
+                      </span>
+                      {isLocked ? (
+                        <Lock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      ) : (
+                        <span className="text-xs font-bold text-blue-800 tabular-nums">
+                          {opt.score}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-600 leading-snug">
+                      {isLocked
+                        ? `Terkunci (maks. sesuai VED Eq ${form.vedEquipment})`
+                        : opt.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* 4. Lead Time */}
+          <section className="pt-4 border-t border-slate-100 space-y-2.5">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                4. Lead Time · Lama Pengadaan ({weights.leadTime}%)
               </h3>
               <p className="text-xs text-slate-600">
                 Berapa lama barang datang sejak order dilakukan?
@@ -340,11 +407,11 @@ export const SparepartEditorModal: React.FC<SparepartEditorModalProps> = ({
             </div>
           </section>
 
-          {/* 4. Sisa Stok Gudang */}
+          {/* 5. Sisa Stok Gudang */}
           <section className="pt-4 border-t border-slate-100 space-y-2.5">
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                4. Sisa Stok Gudang ({weights.stock}%)
+                5. Sisa Stok Gudang ({weights.stock}%)
               </h3>
               <p className="text-xs text-slate-600">
                 Status:{' '}

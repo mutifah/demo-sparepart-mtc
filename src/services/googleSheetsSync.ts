@@ -7,6 +7,7 @@ import {
   SpreadsheetLayout,
 } from '../types/sparepart';
 import {
+  clampPartVed,
   computeSparepart,
   DEFAULT_WEIGHTS,
   defaultEstimasiForLeadTime,
@@ -372,7 +373,8 @@ export async function loadSpreadsheetData(
       subLokasi: string;
       namaEquipment: string;
       namaPart: string;
-      ved: 'V' | 'E' | 'D';
+      vedEquipment: 'V' | 'E' | 'D';
+      vedPart: 'V' | 'E' | 'D';
       satuan: string;
     }
     const vedList: VedParsed[] = [];
@@ -400,6 +402,7 @@ export async function loadSpreadsheetData(
           subLokasi: findColumnIndex(headers, ['sublokasi', 'sub']),
           namaEquipment: findColumnIndex(headers, ['equipment', 'mesin'], ['ved', 'skor']),
           vedEquipment: findColumnIndex(headers, ['vedequipment', 'vedeq']),
+          skorVedEq: findColumnIndex(headers, ['skorvedeq', 'skorvedequipment']),
           namaPart: findColumnIndex(headers, ['namasparepart', 'namapart', 'sparepart'], ['skor', 'ved']),
           spesifikasiMerk: findColumnIndex(headers, ['spesifikasi', 'merk', 'spec']),
           vedPart: findColumnIndex(headers, ['vedpart', 'ved'], ['equipment', 'eq', 'skor']),
@@ -419,6 +422,7 @@ export async function loadSpreadsheetData(
         let lastLokasi = 'WTP';
         let lastSub = '';
         let lastEq = '';
+        let lastEqVed: 'V' | 'E' | 'D' = 'E';
 
         for (let i = headerIdx + 1; i < rows.length; i++) {
           const row = rows[i] ?? [];
@@ -434,17 +438,27 @@ export async function loadSpreadsheetData(
             cols.namaEquipment >= 0
               ? String(row[cols.namaEquipment] ?? '').trim()
               : '';
+          const eqVedRaw =
+            cols.vedEquipment >= 0
+              ? String(row[cols.vedEquipment] ?? '').trim()
+              : '';
+          const partVedRaw =
+            cols.vedPart >= 0 ? String(row[cols.vedPart] ?? '').trim() : '';
 
           if (lokasi) lastLokasi = lokasi;
           if (sub) lastSub = sub;
           if (eq) lastEq = eq;
+          if (eqVedRaw) {
+            lastEqVed = parseVedCode(eqVedRaw, lastEqVed);
+          } else if (cols.vedEquipment < 0 && partVedRaw) {
+            lastEqVed = parseVedCode(partVedRaw, lastEqVed);
+          }
 
-          const vedRaw =
-            cols.vedPart >= 0
-              ? row[cols.vedPart]
-              : cols.vedEquipment >= 0
-                ? row[cols.vedEquipment]
-                : 'E';
+          const vedEquipment = lastEqVed;
+          const vedPart = clampPartVed(
+            parseVedCode(partVedRaw || vedEquipment, vedEquipment),
+            vedEquipment
+          );
 
           const entry: VedParsed = {
             row1: i + 1,
@@ -457,7 +471,8 @@ export async function loadSpreadsheetData(
             subLokasi: sub || lastSub,
             namaEquipment: eq || lastEq,
             namaPart: partName,
-            ved: parseVedCode(vedRaw, 'E'),
+            vedEquipment,
+            vedPart,
             satuan: cols.satuan >= 0 ? String(row[cols.satuan] ?? '').trim() : '',
           };
           vedList.push(entry);
@@ -644,6 +659,9 @@ export async function loadSpreadsheetData(
 
       const leadTimeCategory = parseLeadTimeCategory(lt?.kategori);
 
+      const vedEquipment = ved?.vedEquipment ?? 'E';
+      const vedPart = clampPartVed(ved?.vedPart ?? vedEquipment, vedEquipment);
+
       items.push({
         id: generateItemId(),
         noRak: st?.noRak || lt?.noRak || ved?.noRak || m?.noRak || '-',
@@ -652,7 +670,8 @@ export async function loadSpreadsheetData(
         lokasiUnit: ved?.lokasiUnit || 'WTP',
         subLokasi: ved?.subLokasi || '',
         namaEquipment: ved?.namaEquipment || m?.equipment || '',
-        ved: ved?.ved ?? 'E',
+        vedEquipment,
+        vedPart,
         leadTimeCategory,
         estimasiWaktu:
           lt?.estimasi || defaultEstimasiForLeadTime(leadTimeCategory),
@@ -694,8 +713,9 @@ export async function loadSpreadsheetData(
         const colRak = findColumnIndex(headers, ['rak', 'kode']);
         const colName = findColumnIndex(headers, ['namasparepart', 'namapart', 'nama', 'part', 'barang']);
         const colSpec = findColumnIndex(headers, ['spesifikasi', 'merk', 'spec']);
-        const colEq = findColumnIndex(headers, ['equipment', 'mesin', 'unit']);
-        const colVed = findColumnIndex(headers, ['ved']);
+        const colEq = findColumnIndex(headers, ['equipment', 'mesin', 'unit'], ['ved', 'skor']);
+        const colVedEq = findColumnIndex(headers, ['vedequipment', 'vedeq']);
+        const colVedPart = findColumnIndex(headers, ['vedpart', 'ved'], ['equipment', 'eq', 'skor']);
         const colLt = findColumnIndex(headers, ['leadtime', 'lt']);
         const colMin = findColumnIndex(headers, ['min']);
         const colMax = findColumnIndex(headers, ['max']);
@@ -709,6 +729,21 @@ export async function loadSpreadsheetData(
           const ltCat = parseLeadTimeCategory(
             colLt >= 0 ? row[colLt] : 'Distributor 1-4 mgg'
           );
+          const vedEquipment = parseVedCode(
+            colVedEq >= 0
+              ? row[colVedEq]
+              : colVedPart >= 0
+                ? row[colVedPart]
+                : 'E',
+            'E'
+          );
+          const vedPart = clampPartVed(
+            parseVedCode(
+              colVedPart >= 0 ? row[colVedPart] : vedEquipment,
+              vedEquipment
+            ),
+            vedEquipment
+          );
           items.push({
             id: generateItemId(),
             noRak: colRak >= 0 ? String(row[colRak] ?? '-').trim() || '-' : '-',
@@ -718,7 +753,8 @@ export async function loadSpreadsheetData(
             lokasiUnit: 'WTP',
             subLokasi: '',
             namaEquipment: colEq >= 0 ? String(row[colEq] ?? '').trim() : '',
-            ved: parseVedCode(colVed >= 0 ? row[colVed] : 'E', 'E'),
+            vedEquipment,
+            vedPart,
             leadTimeCategory: ltCat,
             estimasiWaktu: defaultEstimasiForLeadTime(ltCat),
             satuan:
@@ -926,10 +962,12 @@ export async function saveItemToSpreadsheet(
     setCell(layout.ved, vRow, 'lokasiUnit', item.lokasiUnit);
     setCell(layout.ved, vRow, 'subLokasi', item.subLokasi);
     setCell(layout.ved, vRow, 'namaEquipment', item.namaEquipment);
+    setCell(layout.ved, vRow, 'vedEquipment', item.vedEquipment);
+    setCell(layout.ved, vRow, 'skorVedEq', computed.skorVedEquipment);
     setCell(layout.ved, vRow, 'namaPart', item.namaPart);
     setCell(layout.ved, vRow, 'spesifikasiMerk', item.spesifikasiMerk);
-    setCell(layout.ved, vRow, 'vedPart', item.ved);
-    setCell(layout.ved, vRow, 'skorVed', computed.skorVed);
+    setCell(layout.ved, vRow, 'vedPart', computed.vedPart);
+    setCell(layout.ved, vRow, 'skorVed', computed.skorVedPart);
     setCell(layout.ved, vRow, 'satuan', item.satuan);
 
     const lRow = item.rowRefs.ltRow;
@@ -953,7 +991,7 @@ export async function saveItemToSpreadsheet(
       const kRow = item.rowRefs.skoringRow;
       setCell(layout.skoring, kRow, 'noRak', item.noRak);
       setCell(layout.skoring, kRow, 'namaPart', item.namaPart);
-      setCell(layout.skoring, kRow, 'skorVed', computed.skorVed);
+      setCell(layout.skoring, kRow, 'skorVed', computed.skorVedPart);
       setCell(layout.skoring, kRow, 'skorLt', computed.skorLeadTime);
       setCell(layout.skoring, kRow, 'skorStok', computed.skorSisaStok);
       setCell(layout.skoring, kRow, 'vedBobot', computed.vedBobot);
@@ -1028,11 +1066,12 @@ export async function saveItemToSpreadsheet(
       lokasiUnit: item.lokasiUnit,
       subLokasi: item.subLokasi,
       namaEquipment: item.namaEquipment,
-      vedEquipment: item.ved,
+      vedEquipment: item.vedEquipment,
+      skorVedEq: computed.skorVedEquipment,
       namaPart: item.namaPart,
       spesifikasiMerk: item.spesifikasiMerk,
-      vedPart: item.ved,
-      skorVed: computed.skorVed,
+      vedPart: computed.vedPart,
+      skorVed: computed.skorVedPart,
       satuan: item.satuan,
     }),
     buildAppendRow(layout.lt, lNext, {
@@ -1059,7 +1098,7 @@ export async function saveItemToSpreadsheet(
     buildAppendRow(layout.skoring, kNext, {
       noRak: item.noRak,
       namaPart: item.namaPart,
-      skorVed: computed.skorVed,
+      skorVed: computed.skorVedPart,
       skorLt: computed.skorLeadTime,
       skorStok: computed.skorSisaStok,
       vedBobot: computed.vedBobot,
@@ -1146,13 +1185,13 @@ function buildGuideRows(): (string | number)[][] {
     ['Mengacu pada prinsip Criticality Assessment – ISO 55001 Asset Management'],
     [''],
     ['ALUR KERJA'],
-    ['Step 1', 'Sheet [1_ASSET_VED] → Klasifikasi equipment & spare part ke dalam kategori V / E / D'],
+    ['Step 1', 'Sheet [1_ASSET_VED] → Klasifikasi VED Equipment & VED Part (V / E / D; VED Part maks. VED Equipment)'],
     ['Step 2', 'Sheet [2_LEAD_TIME] → Isi estimasi lead time pengadaan tiap spare part (Lokal / Distributor / Impor)'],
     ['Step 3', 'Sheet [3_SISA_STOK] → Update sisa stok aktual tiap siklus perencanaan'],
     ['Step 4', 'Sheet [4_SKORING] → Hasil kompilasi otomatis berdasarkan bobot VED + Lead Time + Sisa Stok'],
     [''],
     ['SKEMA SKOR'],
-    ['Parameter VED', 'Vital = 15 | Essential = 10 | Desirable = 5'],
+    ['Parameter VED', 'Vital = 15 | Essential = 10 | Desirable = 5 (Skor VED Part ≤ Skor VED Equipment)'],
     ['Bobot Default', 'VED = 50% | Lead Time = 25% | Sisa Stok = 25% → Total Skor Maks = 15.0'],
     ['Skor Stok', 'Stok < Min → 15 | Min ≤ Stok < 2×Min → 10 | Stok ≥ 2×Min → 5'],
     ['Skor Lead Time', 'Impor/Indent >1 bln → 15 | Distributor 1–4 mgg → 10 | Lokal <1 mgg → 5'],
@@ -1178,10 +1217,12 @@ function buildStandardTabsValues(
       'Lokasi / Unit',
       'Sub Lokasi',
       'Nama Equipment',
+      'VED Equipment',
+      'Skor VED Eq',
       'Nama Spare Part',
       'Spesifikasi & Merk',
-      'VED',
-      'Skor VED',
+      'VED Part',
+      'Skor VED Part',
     ],
     ...computed.map((item, idx) => {
       const r = idx + 2;
@@ -1190,10 +1231,12 @@ function buildStandardTabsValues(
         item.lokasiUnit,
         item.subLokasi,
         item.namaEquipment,
+        item.vedEquipment,
+        `=IF(E${r}="V"${sep}15${sep}IF(E${r}="E"${sep}10${sep}5))`,
         item.namaPart,
         item.spesifikasiMerk,
-        item.ved,
-        `=IF(G${r}="V"${sep}15${sep}IF(G${r}="E"${sep}10${sep}5))`,
+        item.vedPart,
+        `=IF(I${r}="V"${sep}15${sep}IF(I${r}="E"${sep}10${sep}5))`,
       ];
     }),
   ];
@@ -1274,7 +1317,7 @@ function buildStandardTabsValues(
       return [
         item.noRak,
         item.namaPart,
-        `='${STANDARD_TABS.VED}'!H${vedRefRow}`,
+        `='${STANDARD_TABS.VED}'!J${vedRefRow}`,
         `='${STANDARD_TABS.LEAD_TIME}'!E${ltRefRow}`,
         `='${STANDARD_TABS.STOCK}'!H${stokRefRow}`,
         `=C${rowNum}*$C$2`,

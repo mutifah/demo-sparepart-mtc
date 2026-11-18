@@ -123,6 +123,12 @@ export const GuideView: React.FC<GuideViewProps> = ({
             <h3 className="text-sm font-bold text-slate-900">
               1. VED · Tingkat Kekritisan ({weights.ved}%)
             </h3>
+            <p className="mt-1 text-slate-600">
+              Terdiri dari <strong className="text-slate-900">VED Equipment</strong>{' '}
+              (mesin induk) dan <strong className="text-slate-900">VED Sparepart</strong>.
+              Skor VED Part tidak boleh lebih tinggi dari VED Equipment
+              (Eq V → Part V/E/D, Eq E → Part maks E, Eq D → Part wajib D).
+            </p>
             <ul className="mt-1.5 space-y-1">
               <li>
                 <strong className="text-slate-900">V · Vital (15):</strong>{' '}
